@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listening Dictation</title>
+<style>
+*{box-sizing:border-box}
+:root{--blue:#2563eb;--dark:#172033;--muted:#667085;--line:#e5e7eb;--bg:#f5f7fb;--green:#15803d;--orange:#b45309;--red:#b91c1c}
+body{margin:0;background:var(--bg);color:var(--dark);font-family:Inter,Arial,sans-serif}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+.app{max-width:1000px;margin:auto;padding:22px 16px 50px}
+header,.panel,.card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 7px 25px rgba(16,24,40,.06)}
+header{padding:22px;margin-bottom:16px}
+.brand{display:flex;justify-content:space-between;align-items:center;gap:15px}
+h1{font-size:28px;margin:0 0 5px}.sub{margin:0;color:var(--muted)}
+.tabs{display:flex;gap:8px;margin-top:18px}
+.tabs button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 15px}
+.tabs button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.panel{padding:20px;margin-bottom:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+label{font-weight:700;font-size:14px}
+input,textarea,select{width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:11px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--blue)}
+.field{flex:1;min-width:220px}.field small{display:block;color:var(--muted);margin-top:5px}
+.btn{border:1px solid #d0d5dd;background:#fff;padding:10px 14px;border-radius:10px}
+.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+.danger{color:#fff;background:#dc2626;border-color:#dc2626}
+.lesson-title{font-size:20px;font-weight:800;margin-bottom:14px}
+.progress{height:9px;background:#e9edf3;border-radius:99px;overflow:hidden;margin:15px 0 7px}
+.bar{height:100%;background:var(--blue);width:0;transition:.25s}
+.stats{display:flex;justify-content:space-between;color:var(--muted);font-size:13px}
+.audio{padding:17px;background:#f8fafc;border:1px solid var(--line);border-radius:14px;margin:18px 0}
+.audio-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.speed{margin-left:auto;display:flex;gap:7px;align-items:center;color:var(--muted)}
+textarea{min-height:145px;resize:vertical;line-height:1.6}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.feedback{display:none;margin-top:14px;padding:13px;border-radius:12px;line-height:1.5}
+.feedback.show{display:block}.feedback.ok{background:#ecfdf3;border:1px solid #a7f3d0;color:#166534}.feedback.no{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412}
+.answer{display:none;margin-top:10px;padding:13px;background:#f8fafc;border-left:4px solid var(--blue);border-radius:9px}
+.answer.show{display:block}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:17px}
+.nav .btn{min-width:130px}
+.result{text-align:center;padding:26px}
+.score{font-size:55px;font-weight:900;margin:5px}.review{text-align:left;margin-top:22px}
+.review div{padding:12px 0;border-bottom:1px solid var(--line)}
+.correct{color:var(--green)}.wrong{color:var(--red)}
+.hidden{display:none!important}
+.editor-list{margin-top:15px}
+.editor-item{border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:10px}
+.editor-item .row{margin-top:9px}
+.badge{font-size:12px;padding:4px 8px;border-radius:99px;background:#eef2ff;color:#3730a3}
+.help{background:#eff6ff;border:1px solid #bfdbfe;padding:13px;border-radius:12px;color:#1e40af;line-height:1.5}
+.code{background:#111827;color:#e5e7eb;padding:10px;border-radius:8px;font-family:monospace;font-size:13px;overflow:auto}
+@media(max-width:650px){.brand{align-items:flex-start;flex-direction:column}.speed{margin-left:0;width:100%}.nav .btn{flex:1}.app{padding:12px 10px 35px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand">
+    <div><h1>🎧 Listening Dictation</h1><p class="sub">Nghe · Chép chính tả · Kiểm tra · Tính điểm</p></div>
+    <span class="badge">V2 – GitHub Pages Ready</span>
+  </div>
+  <div class="tabs">
+    <button id="studentTab" class="active" onclick="setMode('student')">🎧 Student</button>
+    <button id="teacherTab" onclick="setMode('teacher')">👩‍🏫 Teacher</button>
+  </div>
+</header>
+
+<section id="studentMode">
+  <div class="panel">
+    <div class="lesson-title" id="studentLessonTitle"></div>
+    <div class="row">
+      <div class="field">
+        <label>Chọn bài</label>
+        <select id="lessonSelect" onchange="changeLesson()"></select>
+      </div>
+      <button class="btn" onclick="restart()">↻ Làm lại</button>
+    </div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="stats"><span id="progressText"></span><span id="scoreText"></span></div>
+  </div>
+
+  <section class="card" id="questionCard" style="padding:22px">
+    <div class="stats"><strong id="qNumber"></strong><span id="qStatus"></span></div>
+    <div class="audio">
+      <div class="audio-actions">
+        <button class="btn primary" id="playBtn" onclick="playAudio()">▶ Play</button>
+        <button class="btn" onclick="replay()">↻ Replay</button>
+        <div class="speed">Tốc độ
+          <select id="speed" onchange="changeSpeed()">
+            <option value=".75">0.75×</option><option value="1" selected>1.0×</option><option value="1.25">1.25×</option>
+          </select>
+        </div>
+      </div>
+      <audio id="realAudio" controls class="hidden" style="width:100%;margin-top:12px"></audio>
+    </div>
+    <label for="typed">✍️ Chép lại những gì bạn nghe được</label>
+    <textarea id="typed" placeholder="Type what you hear here..."></textarea>
+    <div class="actions">
+      <button class="btn primary" onclick="check()">✓ Check Answer</button>
+      <button class="btn" onclick="showAnswer()">💡 Show Answer</button>
+    </div>
+    <div id="feedback" class="feedback"></div>
+    <div id="answer" class="answer"><b>Đáp án:</b><br><span id="answerText"></span></div>
+    <div class="nav">
+      <button class="btn" onclick="prev()">← Câu trước</button>
+      <button class="btn primary" onclick="next()">Câu tiếp →</button>
+    </div>
+  </section>
+
+  <section id="result" class="panel result hidden">
+    <div style="color:var(--muted)">KẾT QUẢ</div>
+    <div class="score" id="finalScore">0%</div>
+    <div id="finalDetail"></div>
+    <div id="review" class="review"></div>
+    <button class="btn primary" onclick="restart()" style="margin-top:15px">↻ Làm lại bài</button>
+  </section>
+</section>
+
+<section id="teacherMode" class="hidden">
+  <div class="panel">
+    <div class="lesson-title">👩‍🏫 Teacher Mode</div>
+    <div class="help">
+      Tạo bài ngay trên trình duyệt. Bạn có thể nhập <b>Audio URL</b> nếu đã có MP3/WAV được host trên GitHub Pages.
+      Nếu để trống Audio URL, website dùng giọng đọc tiếng Anh của trình duyệt.
+    </div>
+    <div class="row" style="margin-top:16px">
+      <div class="field"><label>Tên lesson</label><input id="newLessonName" placeholder="Ví dụ: Lesson 3 – Numbers"></div>
+      <button class="btn primary" onclick="createLesson()">+ Tạo lesson</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="lesson-title">📝 Chỉnh sửa lesson</div>
+    <select id="teacherLesson" onchange="renderEditor()" style="margin-bottom:14px"></select>
+    <div class="row">
+      <button class="btn" onclick="addQuestion()">+ Thêm câu</button>
+      <button class="btn" onclick="exportData()">⬇ Export dữ liệu</button>
+      <label class="btn" style="display:inline-block">⬆ Import dữ liệu
+        <input type="file" accept=".json" onchange="importData(event)" style="display:none">
+      </label>
+      <button class="btn danger" onclick="deleteLesson()">Xóa lesson</button>
+    </div>
+    <div id="editorList" class="editor-list"></div>
+  </div>
+
+  <div class="panel">
+    <div class="lesson-title">🔗 Tạo link cho học viên</div>
+    <p style="color:var(--muted)">Link này chứa nội dung lesson trong URL. Học viên mở link sẽ vào đúng lesson hiện tại.</p>
+    <button class="btn primary" onclick="makeShareLink()">🔗 Tạo link</button>
+    <input id="shareLink" readonly placeholder="Link sẽ xuất hiện ở đây..." style="margin-top:10px">
+    <button class="btn" onclick="copyLink()" style="margin-top:8px">Copy link</button>
+    <p class="help" style="margin-top:12px">
+      Lưu ý: link chia sẻ phù hợp với bài ngắn. Với bài nhiều câu hoặc audio MP3, nên host audio trong cùng repository và nhập đường dẫn audio.
+    </p>
+  </div>
+</section>
+</div>
+
+<script>
+const DEFAULT_DATA={
+ lessons:[
+  {name:"Lesson 1 – Daily Routine",questions:[
+   {text:"I usually get up at seven o'clock.",audioText:"I usually get up at seven o'clock.",audioUrl:""},
+   {text:"I have breakfast before I go to work.",audioText:"I have breakfast before I go to work.",audioUrl:""},
+   {text:"I usually catch the bus at eight thirty.",audioText:"I usually catch the bus at eight thirty.",audioUrl:""},
+   {text:"I sometimes go to the gym after work.",audioText:"I sometimes go to the gym after work.",audioUrl:""},
+   {text:"In the evening, I relax with my friends.",audioText:"In the evening, I relax with my friends.",audioUrl:""}
+  ]},
+  {name:"Lesson 2 – Time & Dates",questions:[
+   {text:"The class starts at nine fifteen.",audioText:"The class starts at nine fifteen.",audioUrl:""},
+   {text:"My birthday is on the twenty-third of May.",audioText:"My birthday is on the twenty-third of May.",audioUrl:""},
+   {text:"The meeting is on Monday morning.",audioText:"The meeting is on Monday morning.",audioUrl:""},
+   {text:"The course finishes in June.",audioText:"The course finishes in June.",audioUrl:""},
+   {text:"I was born in two thousand and ten.",audioText:"I was born in two thousand and ten.",audioUrl:""}
+  ]}
+ ]
+};
+
+let data=loadData(), lessonIndex=0, current=0, attempts=[], mode="student", speech=null;
+const $=id=>document.getElementById(id);
+
+function loadData(){
+ try{return JSON.parse(localStorage.getItem("dictationData"))||structuredClone(DEFAULT_DATA)}catch(e){return structuredClone(DEFAULT_DATA)}
+}
+function saveData(){localStorage.setItem("dictationData",JSON.stringify(data))}
+function normalize(s){return s.toLowerCase().replace(/[.,!?;:'"“”‘’()\-]/g," ").replace(/\s+/g," ").trim()}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+
+function setMode(m){
+ mode=m;$("studentMode").classList.toggle("hidden",m!=="student");$("teacherMode").classList.toggle("hidden",m!=="teacher");
+ $("studentTab").classList.toggle("active",m==="student");$("teacherTab").classList.toggle("active",m==="teacher");
+ if(m==="teacher") renderTeacherLessons(); else renderStudentLessons();
+}
+function renderStudentLessons(){
+ $("lessonSelect").innerHTML=data.lessons.map((l,i)=>`<option value="${i}">${escapeHtml(l.name)}</option>`).join("");
+ $("lessonSelect").value=lessonIndex;
+ renderQuestion();
+}
+function changeLesson(){lessonIndex=Number($("lessonSelect").value);restart()}
+function restart(){
+ stop();current=0;attempts=new Array(data.lessons[lessonIndex].questions.length).fill(null);
+ $("questionCard").classList.remove("hidden");$("result").classList.add("hidden");renderQuestion()
+}
+function renderQuestion(){
+ const lesson=data.lessons[lessonIndex],q=lesson.questions[current];
+ $("studentLessonTitle").textContent=lesson.name;$("qNumber").textContent=`CÂU ${current+1}`;
+ $("progressText").textContent=`Câu ${current+1} / ${lesson.questions.length}`;
+ $("bar").style.width=((current+1)/lesson.questions.length*100)+"%";
+ const done=attempts.filter(Boolean),correct=done.filter(x=>x.value).length;
+ $("scoreText").textContent=`Điểm: ${correct}/${done.length}`;
+ $("typed").value=attempts[current]?.typed||"";
+ $("feedback").className="feedback";$("feedback").textContent="";
+ $("answer").className="answer";$("answerText").textContent=q.text;$("qStatus").textContent="";
+ const real=q.audioUrl.trim();
+ $("realAudio").classList.toggle("hidden",!real);
+ $("realAudio").src=real||"";
+}
+function playAudio(){
+ const q=data.lessons[lessonIndex].questions[current],speed=Number($("speed").value);
+ if(q.audioUrl.trim()){ $("realAudio").play(); return }
+ if(!("speechSynthesis" in window)){alert("Trình duyệt không hỗ trợ đọc tiếng Anh.");return}
+ speechSynthesis.cancel();speech=new SpeechSynthesisUtterance(q.audioText||q.text);speech.lang="en-GB";speech.rate=speed;
+ speech.onstart=()=>$("playBtn").textContent="⏸ Pause";speech.onend=()=>$("playBtn").textContent="▶ Play";speech.onpause=()=>$("playBtn").textContent="▶ Resume";speech.onresume=()=>$("playBtn").textContent="⏸ Pause";speechSynthesis.speak(speech)
+}
+function replay(){stop();setTimeout(playAudio,80)}
+function stop(){if("speechSynthesis"in window)speechSynthesis.cancel();try{$("realAudio").pause()}catch(e){}$("playBtn").textContent="▶ Play"}
+function changeSpeed(){if("speechSynthesis"in window&&speechSynthesis.speaking)replay()}
+function check(){
+ const q=data.lessons[lessonIndex].questions[current],typed=$("typed").value.trim();
+ if(!typed){$("feedback").className="feedback show no";$("feedback").textContent="⚠️ Hãy nhập câu trả lời trước.";return}
+ const ok=normalize(typed)===normalize(q.text);attempts[current]={value:ok,typed};saveProgress();
+ $("feedback").className="feedback show "+(ok?"ok":"no");$("feedback").textContent=ok?"✅ Chính xác!":"❌ Chưa chính xác. Hãy nghe lại và thử lần nữa.";
+ $("qStatus").textContent=ok?"✓ Correct":"✗ Try again";renderScore()
+}
+function saveProgress(){sessionStorage.setItem("dictationProgress",JSON.stringify({lessonIndex,attempts}))}
+function renderScore(){const d=attempts.filter(Boolean),c=d.filter(x=>x.value).length;$("scoreText").textContent=`Điểm: ${c}/${d.length}`}
+function showAnswer(){$("answer").className="answer show"}
+function next(){if(current<data.lessons[lessonIndex].questions.length-1){current++;renderQuestion()}else finish()}
+function prev(){if(current>0){current--;renderQuestion()}}
+function finish(){
+ stop();const total=data.lessons[lessonIndex].questions.length,c=attempts.filter(x=>x&&x.value).length,p=Math.round(c/total*100);
+ $("questionCard").classList.add("hidden");$("result").classList.remove("hidden");$("finalScore").textContent=p+"%";$("finalDetail").innerHTML=`Đúng <b>${c}/${total}</b> câu`;
+ $("review").innerHTML="<h3>Review</h3>"+data.lessons[lessonIndex].questions.map((q,i)=>{
+  const r=attempts[i];return `<div><b>Câu ${i+1} ${r?.value?"✅":"❌"}</b><br>${escapeHtml(q.text)}${r?.typed?`<br><span class="${r.value?"correct":"wrong"}">Bạn viết: ${escapeHtml(r.typed)}</span>`:""}</div>`
+ }).join("")
+}
+
+/* TEACHER */
+function renderTeacherLessons(){
+ $("teacherLesson").innerHTML=data.lessons.map((l,i)=>`<option value="${i}">${escapeHtml(l.name)}</option>`).join("");
+ $("teacherLesson").value=lessonIndex;renderEditor()
+}
+function createLesson(){
+ const name=$("newLessonName").value.trim()||"New Lesson";
+ data.lessons.push({name,questions:[{text:"",audioText:"",audioUrl:""}]});lessonIndex=data.lessons.length-1;$("newLessonName").value="";saveData();renderTeacherLessons()
+}
+function renderEditor(){
+ lessonIndex=Number($("teacherLesson").value);const lesson=data.lessons[lessonIndex];
+ $("editorList").innerHTML=lesson.questions.map((q,i)=>`
+ <div class="editor-item">
+   <div class="row"><strong>Câu ${i+1}</strong>
+   <button class="btn danger" style="margin-left:auto" onclick="removeQuestion(${i})">Xóa</button></div>
+   <div class="row">
+    <div class="field"><label>Transcript / Đáp án</label><input value="${escapeHtml(q.text)}" oninput="editQ(${i},'text',this.value)" placeholder="I usually get up at seven."></div>
+    <div class="field"><label>Text đọc audio</label><input value="${escapeHtml(q.audioText)}" oninput="editQ(${i},'audioText',this.value)" placeholder="Nếu để trống sẽ dùng Transcript"></div>
+   </div>
+   <div style="margin-top:9px"><label>Audio URL (MP3/WAV, tùy chọn)</label><input value="${escapeHtml(q.audioUrl||"")}" oninput="editQ(${i},'audioUrl',this.value)" placeholder="audio/lesson1/q1.mp3"></div>
+ </div>`).join("")
+}
+function editQ(i,k,v){data.lessons[lessonIndex].questions[i][k]=v;saveData()}
+function addQuestion(){data.lessons[lessonIndex].questions.push({text:"",audioText:"",audioUrl:""});saveData();renderEditor()}
+function removeQuestion(i){
+ if(data.lessons[lessonIndex].questions.length<=1){alert("Lesson phải có ít nhất 1 câu.");return}
+ data.lessons[lessonIndex].questions.splice(i,1);saveData();renderEditor()
+}
+function deleteLesson(){
+ if(data.lessons.length<=1){alert("Phải giữ ít nhất 1 lesson.");return}
+ if(confirm("Xóa lesson này?")){data.lessons.splice(lessonIndex,1);lessonIndex=0;saveData();renderTeacherLessons();renderStudentLessons()}
+}
+function exportData(){
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);a.download="listening-dictation-data.json";a.click();URL.revokeObjectURL(a.href)
+}
+function importData(e){
+ const file=e.target.files[0];if(!file)return;const r=new FileReader();
+ r.onload=()=>{try{const x=JSON.parse(r.result);if(!x.lessons)throw Error();data=x;lessonIndex=0;saveData();renderTeacherLessons();renderStudentLessons();alert("Import thành công!")}catch(err){alert("File JSON không hợp lệ.")}};r.readAsText(file)
+}
+function makeShareLink(){
+ const payload=btoa(unescape(encodeURIComponent(JSON.stringify(data.lessons[lessonIndex]))));
+ const url=location.href.split("#")[0]+"#lesson="+payload;
+ $("shareLink").value=url
+}
+function copyLink(){const x=$("shareLink");if(!x.value)return; navigator.clipboard?.writeText(x.value);alert("Đã copy link.")}
+function loadShared(){
+ if(!location.hash.startsWith("#lesson="))return;
+ try{
+  const obj=JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(8)))));
+  if(obj&&obj.questions){data.lessons=[obj];lessonIndex=0;saveData()}
+ }catch(e){}
+}
+loadShared();renderStudentLessons();
+</script>
+</body>
+</html>
